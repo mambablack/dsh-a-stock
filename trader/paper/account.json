@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "account_id": "paper-1",
+  "created": "2026-11-15 19:16:47",
+  "capital": 1000000.0,
+  "cash": 1000000.0,
+  "peak_equity": 1000000.0,
+  "positions": {},
+  "closed_trades": 0,
+  "realized_pnl": 0.0,
+  "updated": "2026-11-15 19:16:47"
+}
