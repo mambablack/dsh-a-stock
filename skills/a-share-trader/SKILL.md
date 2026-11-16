@@ -70,7 +70,16 @@ dir "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\journ
 4. 飞书发复盘卡片（3–5 行 + 关键数字）。
 
 ### 每周一 09:00
-读本周所有日志 → 提炼 1–3 条教训 → 按"进化机制"出提案卡（见 `docs/02-进化机制.md`）。
+1. 读本周所有 `trader/memory/journal/*.md`；
+2. 提炼 1–3 条教训（有数据支撑的，不是感想）；
+3. 用 `python scripts\propose.py new --title ... --run ... --evidence ... --change ... --impact ...`
+   出提案卡（不要手写文件），飞书发卡片等人类批准；
+4. 更新 `trader/memory/index.md` 的待办；
+5. 没有可提的，就回「本周无提案：原因」，不要为了交差硬造提案。
+
+### 盘中（脚本辅助）
+`scripts\monitor.py --once` 会盯止损/止盈并在触发时唤醒你（事件注入）；
+你收到「【盘中触发】」消息时按第 5 节纪律卖出即可，不要重新判断该不该卖。
 
 ## 4. L2 自主权限（限额内自动，超限必须停）
 

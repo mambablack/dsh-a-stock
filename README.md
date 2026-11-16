@@ -11,10 +11,13 @@
 | 层 | 位置 | 说明 |
 |---|---|---|
 | 人格与流程 | `skills/a-share-trader/` | 开场协议、日循环、L2 限额、纪律 |
-| 知识入库 | `skills/knowledge-intake/` | 把你投喂的知识变成可检验的假设 |
+| 知识入库 | `skills/knowledge-intake/` + `scripts/intake.py` | 把你投喂的知识变成可检验的假设 |
 | 模拟账本 | `scripts/paper.py` | T+1、整手、成本、风控闸门、净值 |
+| 盘中监控 | `scripts/monitor.py` | 止损/止盈触发 → 唤醒交易台 |
+| 提案审批 | `scripts/propose.py` | 进化提案：建档、批准、驳回 |
+| 定时任务 | 飞书插件 `routines` | 盘前/盘中/收盘自动执行 |
 | 记忆 | `trader/memory/` | 事实 / 知识 / 打法 / 日志 四层 |
-| 回测引擎 | `../ashare-db/strategy-lab/` | 规则 DSL、回测、消融、敏感性 |
+| 回测引擎 | `../strategy-lab/` | 规则 DSL、回测、消融、敏感性 |
 | 实时行情 | DSH 技能 `a-share-market-data` | 腾讯/东财/AkShare |
 
 **会话只是 CPU，文件才是记忆。** 换会话、重启、`/new` 都不会让交易员失忆——
