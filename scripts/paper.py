@@ -42,6 +42,7 @@ RISK_FILE = PAPER / "risk.json"
 ORDERS = PAPER / "orders.jsonl"
 NAV = PAPER / "nav.csv"
 QUOTE_SKILL = Path(os.path.expanduser("~")) / ".dsh" / "skills" / "a-share-market-data" / "scripts" / "quote.cmd"
+ALLOCATION = PAPER / "allocation.json"
 
 DEFAULT_RISK = {
     "max_positions": 8,
@@ -251,8 +252,34 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def _allocation() -> dict[str, Any]:
+    """Per-playbook capital budget. Missing file means "no per-playbook limits"."""
+    data = _load_json(ALLOCATION, {})
+    return data if isinstance(data, dict) else {}
+
+
+def _playbook_rule(strategy: str) -> dict[str, Any] | None:
+    if not strategy:
+        return None
+    playbooks = _allocation().get("playbooks") or {}
+    rule = playbooks.get(strategy)
+    return rule if isinstance(rule, dict) else None
+
+
+def _strategy_exposure(account: dict[str, Any], strategy: str) -> tuple[float, int]:
+    """Cost basis and position count held under one playbook."""
+    cost = 0.0
+    count = 0
+    for position in account["positions"].values():
+        if (position.get("strategy") or "") == strategy:
+            cost += position["units"] * position["avg_cost"]
+            count += 1
+    return cost, count
+
+
 def _risk_check_buy(account: dict[str, Any], risk: dict[str, Any], code: str,
-                    units: int, price: float, orders: Path) -> tuple[bool, str]:
+                    units: int, price: float, orders: Path,
+                    strategy: str = "") -> tuple[bool, str]:
     if units <= 0 or units % risk["lot_size"] != 0:
         return False, f"股数必须是 {risk['lot_size']} 的整数倍"
     if code in account["positions"]:
@@ -278,6 +305,23 @@ def _risk_check_buy(account: dict[str, Any], risk: dict[str, Any], code: str,
                        f"({-risk['max_drawdown_stop']*100:.0f}%)，需人工确认")
     if account["cash"] - cost < equity * risk["min_cash_pct"]:
         return False, "现金低于最低保留比例"
+    rule = _playbook_rule(strategy)
+    if rule is not None:
+        weight = float(rule.get("weight") or 0.0)
+        if weight <= 0:
+            return False, f"{strategy} 当前分配资金为 0（未上线/已退役）"
+        used, held = _strategy_exposure(account, strategy)
+        budget = equity * weight
+        if used + cost > budget * 1.0001:
+            return False, (f"{strategy} 资金预算不足：已用 {used:,.0f} + 新单 {cost:,.0f} "
+                           f"> 预算 {budget:,.0f}（净值 {weight*100:.0f}%）")
+        limit = int(rule.get("max_positions") or risk["max_positions"])
+        if held >= limit:
+            return False, f"{strategy} 持仓数已达上限 {limit}"
+        position_cap = float(rule.get("position_pct") or risk["max_position_pct"])
+        if cost > equity * position_cap * 1.0001:
+            return False, (f"{strategy} 单票上限 {position_cap*100:.1f}% 净值"
+                           f"（{cost:,.0f} > {equity * position_cap:,.0f}）")
     return True, ""
 
 
@@ -286,7 +330,7 @@ def cmd_buy(args: argparse.Namespace) -> int:
     risk = _load_risk()
     price = float(args.price)
     units = int(args.units)
-    ok, reason = _risk_check_buy(account, risk, args.code, units, price, _orders_path(args))
+    ok, reason = _risk_check_buy(account, risk, args.code, units, price, _orders_path(args), args.strategy or "")
     if not ok and not args.force_human:
         print(f"拒单：{reason}")
         print("（确需执行请加 --force-human，会被记录为人工越权）")
@@ -455,6 +499,30 @@ def cmd_nav(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_alloc(args: argparse.Namespace) -> int:
+    """Show each playbook's capital budget, usage and remaining room."""
+    account = _load_account(args)
+    equity = _equity(account)
+    data = _allocation()
+    playbooks = data.get("playbooks") or {}
+    if not playbooks:
+        print("没有分配表：所有策略共享全部资金（trader/paper/allocation.json 不存在）")
+        return 0
+    print(f"账户权益 {equity:,.0f} 元   现金 {account['cash']:,.0f} 元")
+    print(f"{'策略':<8}{'状态':<12}{'权重':>6}{'预算':>12}{'已用':>12}{'可用':>12}{'持仓':>8}")
+    total_weight = 0.0
+    for name, rule in sorted(playbooks.items()):
+        weight = float(rule.get("weight") or 0.0)
+        total_weight += weight
+        budget = equity * weight
+        used, held = _strategy_exposure(account, name)
+        limit = int(rule.get("max_positions") or 0)
+        print(f"{name:<8}{str(rule.get('status', '?')):<12}{weight*100:>5.0f}%"
+              f"{budget:>12,.0f}{used:>12,.0f}{budget-used:>12,.0f}{f'{held}/{limit}':>8}")
+    print(f"权重合计 {total_weight*100:.0f}%（其余 {(1-total_weight)*100:.0f}% 视为现金缓冲）")
+    return 0
+
+
 def cmd_check(args: argparse.Namespace) -> int:
     account = _load_account(args)
     equity = _equity(account)
@@ -512,6 +580,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--account-id", default="paper-1")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser("alloc", help="查看各打法资金分配与余量")
+    p.set_defaults(func=cmd_alloc)
 
     p = sub.add_parser("status", help="查看账户")
     p.set_defaults(func=cmd_status)

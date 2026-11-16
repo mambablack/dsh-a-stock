@@ -32,6 +32,9 @@ python scripts\paper.py init --capital 1000000
 # 2) 看账户
 python scripts\paper.py status
 
+# 2b) 看各打法资金预算与余量
+python scripts\paper.py alloc
+
 # 3) 把技能同步到 DSH（飞书会话据此加载）
 powershell -ExecutionPolicy Bypass -File scripts\sync_skills.ps1
 ```

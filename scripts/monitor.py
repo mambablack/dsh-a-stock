@@ -163,6 +163,12 @@ def inject(alerts: list[dict[str, Any]], chat_id: str | None) -> bool:
 
 
 def run_once(args: argparse.Namespace) -> int:
+    if not args.anytime and not args.prices:
+        now = datetime.now()
+        in_window = now.weekday() < 5 and (9, 25) <= (now.hour, now.minute) <= (15, 5)
+        if not in_window:
+            print(f"{now:%H:%M:%S} 非交易时段，跳过（--anytime 可强制）")
+            return 0
     account_path = Path(args.account) if getattr(args, "account", None) else ACCOUNT
     account = _load(account_path)
     if account is None:
@@ -220,6 +226,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--interval", type=int, default=180, help="循环间隔秒数（默认 180）")
     parser.add_argument("--prices", default=None, help="价格 JSON（测试用）")
     parser.add_argument("--account", default=None, help="账户文件（默认 trader/paper/account.json）")
+    parser.add_argument("--anytime", action="store_true", help="不在交易时段也运行")
     parser.add_argument("--dry-run", action="store_true", help="只打印不写入")
     parser.add_argument("--no-inject", dest="inject", action="store_false", default=True,
                         help="不向飞书注入事件")

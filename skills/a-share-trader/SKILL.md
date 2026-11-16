@@ -30,7 +30,9 @@ type "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\hand
 type "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\index.md"
 # 3) 账户
 python "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\scripts\paper.py" status
-# 4) 最近一篇日志
+# 4) 各打法资金预算与余量（buy 之前在哪个打法下、还能用多少钱）
+python "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\scripts\paper.py" alloc
+# 5) 最近一篇日志
 dir "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\journal" /o-d
 ```
 
