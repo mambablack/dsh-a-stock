@@ -21,6 +21,7 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+MEMORY = ROOT / "trader" / "memory"
 REPORTS = ROOT / "trader" / "reports"
 STATUS_LABEL = {"pending": "待批", "approved": "已批准", "rejected": "已驳回"}
 
@@ -122,6 +123,37 @@ def cmd_decide(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_check(args: argparse.Namespace) -> int:
+    """Every PROP- citation in memory files must point at a real proposal file."""
+    existing = {path.stem for path in REPORTS.glob("PROP-*.md")}
+    cited: dict[str, str] = {}
+    bad_format: list[str] = []
+    sources = [MEMORY / "handover.md", MEMORY / "index.md"]
+    sources += sorted((MEMORY / "journal").glob("*.md"))
+    sources += sorted((ROOT / "trader" / "plans").glob("*.md"))
+    pattern = re.compile(r"PROP-(\d{4})-?(\d{2})-?(\d{2})-(\d{1,2})")
+    for path in sources:
+        if not path.exists():
+            continue
+        for match in pattern.finditer(path.read_text(encoding="utf-8")):
+            year, month, day, seq = match.groups()
+            canonical = f"PROP-{year}{month}{day}-{int(seq):02d}"
+            cited[canonical] = path.name
+            if match.group(0) != canonical:
+                bad_format.append(f"{path.name} 里的 {match.group(0)} 应写成 {canonical}")
+    problems = [f"{name} 引用了不存在的提案 {prop}"
+                for prop, name in sorted(cited.items()) if prop not in existing]
+    problems += bad_format
+    if problems:
+        print("提案引用检查失败：")
+        for item in problems:
+            print("  -", item)
+        print("要么用 propose.py new 建卡，要么删掉引用；编号统一写成 PROP-YYYYMMDD-NN。")
+        return 1
+    print(f"提案检查通过：{len(existing)} 张提案文件，{len(cited)} 处引用全部有效。")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="提案卡")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -139,6 +171,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("list", help="列出提案")
     p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser("check", help="检查 journal/handover/index 引用的提案是否存在")
+    p.set_defaults(func=cmd_check)
 
     p = sub.add_parser("decide", help="批准或驳回")
     p.add_argument("--id", required=True)

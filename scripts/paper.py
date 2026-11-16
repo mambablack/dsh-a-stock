@@ -378,12 +378,17 @@ def _load_prices(args: argparse.Namespace, codes: list[str]) -> dict[str, float]
         return prices
     if not args.live:
         return prices
+    if not codes:
+        return prices
     if not QUOTE_SKILL.exists():
         raise SystemExit(f"找不到行情脚本：{QUOTE_SKILL}")
     raw_codes = [code.split(".")[-1] for code in codes]
     command = [str(QUOTE_SKILL), "quote", *raw_codes, "--max-staleness", "300"]
+    # Run the quote skill with this interpreter: the one on PATH may lack zoneinfo
+    # timezone data (tzdata), which breaks the whole --live path.
+    env = {**os.environ, "DSH_PYTHON": sys.executable}
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8",
-                            shell=True)
+                            shell=True, env=env)
     if result.returncode != 0:
         raise SystemExit(f"取价失败：{result.stderr.strip()[:400]}")
     payload = json.loads(result.stdout)

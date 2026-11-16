@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -61,6 +62,9 @@ def _prices_live(codes: list[str]) -> dict[str, float]:
     result = subprocess.run(
         [str(QUOTE), "quote", *raw, "--max-staleness", "300"],
         capture_output=True, text=True, encoding="utf-8", shell=True,
+        # Same interpreter as this script: the python on PATH may lack tzdata,
+        # which breaks the quote skill's zoneinfo lookup.
+        env={**os.environ, "DSH_PYTHON": sys.executable},
     )
     if result.returncode != 0:
         raise SystemExit(f"取价失败：{(result.stderr or result.stdout).strip()[:300]}")

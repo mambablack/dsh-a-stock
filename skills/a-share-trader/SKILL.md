@@ -64,10 +64,17 @@ dir "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\journ
 **不要在盘中临时新增买入计划**（除非计划里已写）。
 
 ### 15:05 收盘复盘
-1. `mark --live` 更新现价，`nav` 记当日净值。
+1. `mark --live` 更新现价，`nav` 记当日净值（空仓时 `mark` 会打印"无需 mark"，`nav --live` 直接记账）。
 2. 写 `trader/memory/journal/YYYY-MM-DD.md`：今日成交、盈亏、计划与实际的差异、犯的错、明天的观察点。
 3. 更新 `handover.md` 的"当前状态"。
-4. 飞书发复盘卡片（3–5 行 + 关键数字）。
+4. 跑两个自检，失败就先修文件再发复盘：
+   - `python scripts\intake.py check`
+   - `python scripts\propose.py check`
+5. `git add -A && git commit -m "journal: YYYY-MM-DD"` —— 当天的计划、日志、账本必须进版本库。
+6. 飞书发复盘卡片（3–5 行 + 关键数字）。
+
+**提案编号纪律**：只有 `propose.py new` 生成了文件，才能在 journal/handover/index 里引用
+`PROP-YYYYMMDD-NN`；不许凭记忆写编号（`propose.py check` 会抓不存在的引用）。
 
 ### 每周一 09:00
 1. 读本周所有 `trader/memory/journal/*.md`；
