@@ -292,7 +292,7 @@ def _risk_check_buy(account: dict[str, Any], risk: dict[str, Any], code: str,
     cost = units * price
     if cost > account["cash"]:
         return False, f"现金不足（需要 {cost:,.0f}，可用 {account['cash']:,.0f}）"
-    if cost > equity * risk["max_position_pct"]:
+    if cost > equity * risk["max_position_pct"] * 1.005:
         return False, (f"单票超过净值 {risk['max_position_pct']*100:.1f}% "
                        f"（{cost:,.0f} > {equity * risk['max_position_pct']:,.0f}）")
     gross = sum(p["units"] * (p.get("last_price") or p["avg_cost"])
@@ -319,7 +319,7 @@ def _risk_check_buy(account: dict[str, Any], risk: dict[str, Any], code: str,
         if held >= limit:
             return False, f"{strategy} 持仓数已达上限 {limit}"
         position_cap = float(rule.get("position_pct") or risk["max_position_pct"])
-        if cost > equity * position_cap * 1.0001:
+        if cost > equity * position_cap * 1.005:
             return False, (f"{strategy} 单票上限 {position_cap*100:.1f}% 净值"
                            f"（{cost:,.0f} > {equity * position_cap:,.0f}）")
     return True, ""
