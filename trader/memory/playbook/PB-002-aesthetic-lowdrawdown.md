@@ -5,6 +5,7 @@ id: PB-002
 name: 审美选股·低回撤版（市值≤30亿 + 价格5-8元）
 status: candidate          # 候选：回测有了，但还没纸面跟踪，不得用于自动交易
 created: 2026-11-15
+from_knowledge: K-20261115-001
 parent: PB-001
 strategy_file: C:\Users\wim\Desktop\codex\ashare-db\strategy-lab\strategies\aesthetic_v1c_selective.json
 backtest_run: runs/aesthetic_v1c_selective_20261115T183252

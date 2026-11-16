@@ -5,6 +5,7 @@ id: PB-001
 name: 审美选股 v1.1（缩量洗盘 + 涨停基因 + 箱体突破）
 status: tracking          # candidate 候选 / tracking 纸面跟踪 / verified 已验证 / retired 已淘汰
 created: 2026-11-15
+from_knowledge: K-20261115-001
 owner: a-share-trader
 strategy_file: C:\Users\wim\Desktop\codex\ashare-db\strategy-lab\strategies\aesthetic_v1.json
 backtest_run: runs/aesthetic_v1_20261115T122427
