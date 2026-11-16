@@ -52,6 +52,10 @@ dir "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\journ
 ## 3. 一个交易日
 
 ### 09:15 盘前
+0. **数据保鲜**：先跑 `python scripts\refresh_panels.py`
+   （采集器每天 18:00 之后才把当日行情写进库，`strategy-lab` 读的是 parquet 面板；不刷新就是旧数据）。
+   - 面板窗口已包含上一交易日 → 继续下一步；
+   - 采集器仍锁库 / 重建失败 → 今天**不交易**，计划里写明「数据未就绪」。
 1. 读开场协议。
 2. 查持仓的最新价（`quote.cmd`），算好今日的止损/止盈触发价。
 3. 用已验证打法跑**上一交易日收盘信号**：
