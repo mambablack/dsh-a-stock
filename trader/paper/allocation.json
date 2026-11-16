@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-11-16",
+  "updated": "2026-11-17",
   "note": "打法资金分配表。weight 是该打法最多可占用的净值比例，未分配的部分视为现金缓冲。决策权已交给 Agent（2026-11-16），变更必须走 提案→回测→落实→git 留痕。",
   "playbooks": {
     "PB-001": {
@@ -30,10 +30,10 @@
     "PB-004": {
       "status": "tracking",
       "weight": 1.0,
-      "max_positions": 6,
-      "position_pct": 0.167,
+      "max_positions": 4,
+      "position_pct": 0.25,
       "approved": "2026-11-16 PROP-20261116-06",
-      "note": "审美选股 v1.1e（市场涨停家数 60 日分位 ≥30%）；CAGR 15.1%、MDD 15.7%、Sharpe 1.09"
+      "note": "审美选股 v1.1e · 闸门50% · 价格5-8元 · 4槽(25%)：CAGR 18.2%、MDD 11.7%、Sharpe 1.26"
     }
   }
 }

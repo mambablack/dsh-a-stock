@@ -1,7 +1,7 @@
 {
-  "max_positions": 6,
+  "max_positions": 4,
   "max_new_per_day": 2,
-  "max_position_pct": 0.167,
+  "max_position_pct": 0.25,
   "max_gross_exposure": 1.0,
   "lot_size": 100,
   "min_cash_pct": 0.0,

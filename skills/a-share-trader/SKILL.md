@@ -56,8 +56,8 @@ dir "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\journ
 2. 查持仓的最新价（`quote.cmd`），算好今日的止损/止盈触发价。
 3. 用已验证打法跑**上一交易日收盘信号**：
    `python -m strategy_lab screen strategies/aesthetic_v1e.json --date <上一交易日>`。
-   **当前打法 = PB-004（审美选股 v1.1e）**，含市场情绪闸门：全市场涨停家数 60 日分位 <30% 时不买。
-   扫描后先看 `market_lu_count_pct`，确认今天的市场是否够热；冷市就直接写"闸门未开，不买"。
+   **当前打法 = PB-004（审美选股 v1.1e）**，价格带 5–8 元，含市场情绪闸门：全市场涨停家数 60 日分位 <50% 时不买。
+   扫描后先看 `market_lu_count_pct`，确认今天的市场是否够热（<0.50 即闸门关闭）；冷市就直接写"闸门未开，不买"。
 4. 生成今日计划写入 `trader/plans/YYYY-MM-DD.md`：买什么（代码/股数/理由/止损止盈）、卖什么（触发条件）。
 5. 把计划用 3–6 行发到飞书（含"今天最多开 2 笔"这类约束）。
 
@@ -104,8 +104,8 @@ dir "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\journ
 | 约束 | 值 |
 |---|---|
 | 单日新开仓 | ≤ 2 笔 |
-| 单票占净值 | ≤ 16.7%（6 槽，每槽 1/6） |
-| 同时持仓 | ≤ 6 只 |
+| 单票占净值 | ≤ 25%（4 槽，每槽 1/4） |
+| 同时持仓 | ≤ 4 只 |
 | 总仓位 | ≤ 100% |
 | 账户回撤熔断 | −22% 后**停止开新仓**，只能卖 |
 | 卖出 | 触发止损/止盈/条件离场即可执行，不受笔数限制 |
