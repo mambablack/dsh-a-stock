@@ -11,7 +11,7 @@ __pycache__/
 .DS_Store
 
 # 账本备份（--force 初始化时生成），保留原始账本
-trader/paper/*.bak-*.json
+trader/paper/*.bak-*
 
 # 行情缓存
 *.cache.json
