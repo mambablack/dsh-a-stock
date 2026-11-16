@@ -59,8 +59,8 @@ def main(argv: list[str] | None = None) -> int:
     code, out = run([PY, str(PAPER), "--account", str(account), "buy", "--code", "sz.000788",
                      "--units", "10000", "--price", "5.00", "--name", "北大医药",
                      "--reason", "演练：箱体突破", "--stop", "4.40", "--target", "6.50",
-                     "--strategy", "PB-001"])
-    step("买入 10,000 股 @5.00（PB-001，止损 4.40 / 止盈 6.50）", code == 0,
+                     "--strategy", "PB-004"])
+    step("买入 10,000 股 @5.00（PB-004，止损 4.40 / 止盈 6.50）", code == 0,
          out.splitlines()[0] if out else "")
 
     # 2) 把建仓日改成昨天，让 T+1 放行（真实交易日里第二天才能卖）
