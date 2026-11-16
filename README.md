@@ -12,9 +12,10 @@
 |---|---|---|
 | 人格与流程 | `skills/a-share-trader/` | 开场协议、日循环、L2 限额、纪律 |
 | 知识入库 | `skills/knowledge-intake/` + `scripts/intake.py` | 把你投喂的知识变成可检验的假设 |
-| 模拟账本 | `scripts/paper.py` | T+1、整手、成本、风控闸门、净值 |
+| 模拟账本 | `scripts/paper.py` | T+1、整手、成本、风控闸门、净值、打法预算 |
 | 盘中监控 | `scripts/monitor.py` | 止损/止盈触发 → 唤醒交易台 |
-| 提案审批 | `scripts/propose.py` | 进化提案：建档、批准、驳回 |
+| 提案审批 | `scripts/propose.py` | 提案：新建 / 批准 / 落实 / 引用校验 |
+| 完整链路演练 | `scripts/rehearse_day.py` | 买入→盯盘→卖出→对账，8 项断言 |
 | 定时任务 | 飞书插件 `routines` | 盘前/盘中/收盘自动执行 |
 | 记忆 | `trader/memory/` | 事实 / 知识 / 打法 / 日志 四层 |
 | 回测引擎 | `../strategy-lab/` | 规则 DSL、回测、消融、敏感性 |

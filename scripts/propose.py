@@ -23,7 +23,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MEMORY = ROOT / "trader" / "memory"
 REPORTS = ROOT / "trader" / "reports"
-STATUS_LABEL = {"pending": "待批", "approved": "已批准", "rejected": "已驳回"}
+STATUS_LABEL = {"pending": "待批", "approved": "已批准", "rejected": "已驳回",
+                "applied": "已落实"}
 
 
 def _next_id(today: str) -> str:
@@ -154,6 +155,43 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_apply(args: argparse.Namespace) -> int:
+    """Mark an approved proposal as applied, after checking the approved state.
+
+    The actual edit (config/strategy/risk) stays with the Agent, because each
+    kind needs a different regression check. This command owns the state change
+    and the audit record so "批准了但忘了落实" cannot happen silently.
+    """
+    path = REPORTS / f"{args.id}.md"
+    if not path.exists():
+        print(f"找不到提案：{path.name}")
+        return 2
+    status = _read_status(path)
+    if status == "applied":
+        print(f"{args.id} 已经是「{STATUS_LABEL['applied']}」状态")
+        return 0
+    if status != "approved":
+        print(f"{args.id} 当前是「{STATUS_LABEL.get(status, status)}」，只有批准后才能落实")
+        return 2
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(r"^status:\s*\w+", "status: applied", text, count=1, flags=re.M)
+    text = text.rstrip() + (
+        f"\n\n## 落实记录\n\n"
+        f"- {date.today().isoformat()} 状态 approved → applied\n"
+        f"- 变更内容：{args.change or '（见上文「建议变更」）'}\n"
+        f"- 回归回测：{args.regression or '（待补 run id）'}\n"
+        f"- 提交：{args.commit or '（待补 commit hash）'}\n"
+    )
+    path.write_text(text, encoding="utf-8")
+    print(f"{args.id} -> {STATUS_LABEL['applied']}")
+    print("落实清单：")
+    print("  1) 改配置/策略（风险层改 trader/paper/risk.json 或 allocation.json，先备份）")
+    print("  2) 跑回归回测，把 run id 填进落实记录")
+    print("  3) python scripts/intake.py check && python scripts/propose.py check")
+    print("  4) git commit -m \"apply <id>\" 并把 commit hash 填进落实记录")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="提案卡")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -171,6 +209,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("list", help="列出提案")
     p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser("apply", help="已批准的提案落实后归档（approved -> applied）")
+    p.add_argument("--id", required=True)
+    p.add_argument("--change", default="")
+    p.add_argument("--regression", default="")
+    p.add_argument("--commit", default="")
+    p.set_defaults(func=cmd_apply)
 
     p = sub.add_parser("check", help="检查 journal/handover/index 引用的提案是否存在")
     p.set_defaults(func=cmd_check)

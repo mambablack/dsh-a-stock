@@ -124,11 +124,12 @@ def check(account: dict[str, Any], prices: dict[str, float], today: str) -> list
     return alerts
 
 
-def record(alerts: list[dict[str, Any]]) -> None:
+def record(alerts: list[dict[str, Any]], path: Path | None = None) -> None:
     if not alerts:
         return
-    ALERTS.parent.mkdir(parents=True, exist_ok=True)
-    with ALERTS.open("a", encoding="utf-8") as handle:
+    target = path or ALERTS
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("a", encoding="utf-8") as handle:
         for alert in alerts:
             handle.write(json.dumps(alert, ensure_ascii=False) + "\n")
 
@@ -196,7 +197,7 @@ def run_once(args: argparse.Namespace) -> int:
     if args.dry_run:
         print("（dry-run：未写入 alerts、未注入事件）")
         return 0
-    record(alerts)
+    record(alerts, Path(args.alerts) if args.alerts else None)
     if args.inject:
         ok = inject(alerts, _chat_id())
         print("已注入飞书事件" if ok else "注入失败")
@@ -226,6 +227,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--interval", type=int, default=180, help="循环间隔秒数（默认 180）")
     parser.add_argument("--prices", default=None, help="价格 JSON（测试用）")
     parser.add_argument("--account", default=None, help="账户文件（默认 trader/paper/account.json）")
+    parser.add_argument("--alerts", default=None, help="告警文件（默认 trader/paper/alerts.jsonl）")
     parser.add_argument("--anytime", action="store_true", help="不在交易时段也运行")
     parser.add_argument("--dry-run", action="store_true", help="只打印不写入")
     parser.add_argument("--no-inject", dest="inject", action="store_false", default=True,
