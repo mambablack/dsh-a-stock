@@ -20,6 +20,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 import subprocess
 import sys
@@ -73,6 +74,17 @@ def db_latest() -> str | None:
     return None
 
 
+LOG = ROOT / "trader" / "logs" / "refresh_panels.log"
+
+
+def _log(message: str) -> None:
+    """Append one line so the silent scheduled task leaves a trace."""
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with LOG.open("a", encoding="utf-8") as handle:
+        handle.write(f"[{stamp}] {message}\n")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="盘前面板刷新")
     parser.add_argument("--check", action="store_true", help="只检查，不重建")
@@ -84,16 +96,19 @@ def main(argv: list[str] | None = None) -> int:
     latest = db_latest()
     if latest is None:
         print("库里读不到最新日期（采集器仍持有写锁，或表名未知）——按下面板旧数据判断")
+        _log("db locked or unknown schema; panels unchanged")
         return 0
     print(f"库内最新日线: {latest}")
     if end and latest <= end:
         print("面板已是最新，无需刷新")
+        _log(f"panels already current at {end}")
         return 0
     if args.check:
         print("面板落后于数据库，需要刷新（去掉 --check 执行）")
         return 0
 
     print("开始重建面板 ...")
+    _log(f"rebuilding panels: db={latest} > panel={end}")
     result = subprocess.run([PY, "-m", "strategy_lab", "data", "update"],
                             cwd=LAB, capture_output=True, text=True, encoding="utf-8")
     tail = (result.stdout or result.stderr).strip().splitlines()[-6:]
