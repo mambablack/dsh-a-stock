@@ -1,15 +1,15 @@
 {
-  "version": 1,
+  "version": 2,
   "updated": "2026-11-16",
-  "note": "打法资金分配表。weight 是该打法最多可占用的净值比例，未分配的部分视为现金缓冲。这是风险层参数，只有人类能批准修改；Agent 只能读。",
+  "note": "打法资金分配表。weight 是该打法最多可占用的净值比例，未分配的部分视为现金缓冲。决策权已交给 Agent（2026-11-16），变更必须走 提案→回测→落实→git 留痕。",
   "playbooks": {
     "PB-001": {
-      "status": "tracking",
-      "weight": 1.0,
-      "max_positions": 6,
-      "position_pct": 0.167,
-      "approved": "2026-11-15 初始上线",
-      "note": "唯一在跟踪的打法；当前占满全部资金预算，但实际平均只用到约 20%"
+      "status": "retired",
+      "weight": 0.0,
+      "max_positions": 0,
+      "position_pct": 0.125,
+      "approved": "",
+      "note": "被 PB-004 取代（PROP-20261116-06）：PB-004 = PB-001 + 市场情绪闸门，收益/回撤/Sharpe 全面更优；保留作对照"
     },
     "PB-002": {
       "status": "candidate",
@@ -17,7 +17,7 @@
       "max_positions": 0,
       "position_pct": 0.0625,
       "approved": "",
-      "note": "待 PROP-20261116-02 批准后才给权重；批准后建议 0.7/0.3 拆分"
+      "note": "股票池是 PB-001 子集，信号重复，不增加资金利用；保留观察"
     },
     "PB-003": {
       "status": "retired",
@@ -25,7 +25,15 @@
       "max_positions": 0,
       "position_pct": 0.0,
       "approved": "",
-      "note": "回测证伪，不分配资金"
+      "note": "回测证伪（每笔 −0.15%），不分配资金"
+    },
+    "PB-004": {
+      "status": "tracking",
+      "weight": 1.0,
+      "max_positions": 6,
+      "position_pct": 0.167,
+      "approved": "2026-11-16 PROP-20261116-06",
+      "note": "审美选股 v1.1e（市场涨停家数 60 日分位 ≥30%）；CAGR 15.1%、MDD 15.7%、Sharpe 1.09"
     }
   }
 }
