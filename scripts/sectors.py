@@ -331,9 +331,92 @@ def momentum(top: int = 15) -> int:
     return 0
 
 
+def lineup(top_boards: int = 5, only_pool: bool = True) -> int:
+    """热点题材 → 成分股名单。
+
+    回答盘前最实际的问题：**今天最强的几个题材里，有哪些票在我们能买的池子里**
+    （默认池子 = PB-004 的 5–8 元、主板/创业板、非 ST）。
+
+    板块热度来自 `board_history.parquet` 的 5 日动量；
+    个股数据来自 strategy-lab 面板（最新一天，若与板块日期不一致会提示）。
+    """
+    history_file = DATA / "board_history.parquet"
+    members_file = DATA / "board_members.parquet"
+    if not history_file.exists() or not members_file.exists():
+        print("缺数据：先跑 fetch_board_history.py 和 fetch_board_members.py")
+        return 2
+
+    history = pd.read_parquet(history_file)
+    history["date"] = pd.to_datetime(history["date"])
+    close = history.pivot_table(index="date", columns="board", values="close").sort_index()
+    board_date = close.index[-1]
+    ret5 = (close.iloc[-1] / close.iloc[-6] - 1.0) * 100
+
+    event_keywords = ("昨日", "涨停", "连板", "首板", "打板", "含一字", "破净", "风格", "热股")
+    ret5 = ret5[~ret5.index.to_series().str.contains("|".join(event_keywords))]
+    hot = ret5.sort_values(ascending=False).head(top_boards)
+
+    def panel_code(code: str) -> str:
+        code = str(code).zfill(6)
+        if code.startswith(("6", "9")):
+            return "sh." + code
+        if code.startswith(("0", "2", "3")):
+            return "sz." + code
+        return "bj." + code
+
+    members = pd.read_parquet(members_file)
+    panels = PANELS
+    price = pd.read_parquet(panels / "close_raw.parquet").set_index("trade_date")
+    price.index = pd.to_datetime(price.index)
+    pct = (price.iloc[-1] / price.iloc[-2] - 1.0) * 100
+    stock_date = price.index[-1]
+
+    lines = [f"# 热点题材成分股 {board_date.date()}",
+             "",
+             f"- 板块数据：{board_date.date()}；个股数据：{stock_date.date()}"
+             + ("（**日期不一致，盘前请先刷新面板**）" if stock_date.date() != board_date.date() else ""),
+             ""]
+    for board, board_ret in hot.items():
+        codes = [panel_code(x) for x in members.loc[members["board"] == board, "code"].tolist()]
+        if not codes:
+            continue
+        frame = pd.DataFrame({"code": codes,
+                              "price": [price.at[stock_date, c] if c in price.columns else float("nan")
+                                        for c in codes],
+                              "pct": [pct.get(c, float("nan")) for c in codes]})
+        frame = frame.dropna(subset=["price"])
+        if frame.empty:
+            continue
+        if only_pool:
+            frame = frame[(frame["price"] >= 5.0) & (frame["price"] <= 8.0)]
+        frame = frame.sort_values("pct", ascending=False)
+        lines.append(f"## {board}（5日 {board_ret:+.1f}%）—— 池内 {len(frame)} 只")
+        lines.append("")
+        if frame.empty:
+            lines.append("（池子里没有成分股）")
+        else:
+            lines.append("| 代码 | 价格 | 当日涨跌 |")
+            lines.append("|---|---:|---:|")
+            for _, row in frame.head(12).iterrows():
+                lines.append(f"| {row['code']} | {row['price']:.2f} | {row['pct']:+.2f}% |")
+        lines.append("")
+
+    lines += ["## 说明", "",
+              "- 池子口径：价格 5–8 元（PB-004 的价格带），不含 ST/退市过滤（还要看策略扫描结果）；",
+              "- 用途：盘前知道「热点题材里有没有我们的票」，配合 `sector report` 与策略扫描一起看。"]
+
+    text = "\n".join(lines) + "\n"
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    out = REPORTS / f"lineup-{board_date.date()}.md"
+    out.write_text(text, encoding="utf-8")
+    print(text)
+    print(f"报告: {out.relative_to(ROOT)}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="行业板块数据与报告")
-    parser.add_argument("action", choices=["fetch", "report", "boards", "momentum"])
+    parser.add_argument("action", choices=["fetch", "report", "boards", "momentum", "lineup"])
     parser.add_argument("--date", default=None)
     parser.add_argument("--top", type=int, default=10)
     args = parser.parse_args(argv)
@@ -343,6 +426,8 @@ def main(argv: list[str] | None = None) -> int:
         return boards(args.top)
     if args.action == "momentum":
         return momentum(args.top)
+    if args.action == "lineup":
+        return lineup(max(1, min(args.top, 10)))
     return report(args.date, args.top)
 
 

@@ -69,12 +69,13 @@ dir "C:\Users\wim\Desktop\codex\ashare-db\agents\dsh-a-stock\trader\memory\journ
    - `4` = 仅 `--check` 模式出现，表示面板落后、需要重建。
    需要机器可读结果用 `--json`。
 1. 读开场协议。
-1.5 **市场与板块**：两个口径都看，写进计划。
-   - 题材口径：`python scripts\sectors.py boards` → 东财板块快照，看今天钱在哪个题材
-     （`trader/reports/boards-<日期>.md`）；
-   - 行业口径：`python scripts\sectors.py report` → 本地日线算的行业强弱
-     （`trader/reports/sectors-<日期>.md`）；
+1.5 **市场与板块**：三个口径都看，把结论写进计划。
+   - 题材快照：`python scripts\sectors.py boards` → 今天钱在哪个题材；
+   - 题材轮动：`python scripts\sectors.py momentum` → 5/20 日动量与"加速中"的板块；
+   - 热点成分：`python scripts\sectors.py lineup` → 强势题材里、我们价格池（5–8 元）内有哪些票；
+   - 行业口径：`python scripts\sectors.py report` → 本地日线算的行业强弱与涨停分布；
    - 结论写成一句"今天钱在 A/B 题材、C 行业在跌"；**冷门板块里不找票**。
+     注意：板块只作背景判断，**不要写成硬过滤条件**（M-005 已证伪）。
 2. 查持仓的最新价（`quote.cmd`），算好今日的止损/止盈触发价。
 3. 用已验证打法跑**上一交易日收盘信号**：
    `python -m strategy_lab screen strategies/aesthetic_v1e.json --date <上一交易日>`。
