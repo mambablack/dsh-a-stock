@@ -414,11 +414,60 @@ def lineup(top_boards: int = 5, only_pool: bool = True) -> int:
     return 0
 
 
+def check(codes_text: str) -> int:
+    """查候选票属于哪些题材、这些题材今天/近 5 日强不强。
+
+    用法：python scripts/sectors.py check --codes sz.000404,sh.600998
+    盘前扫描出候选后，用它给每只票补一条"所属题材与热度"的判断依据。
+    """
+    members_file = DATA / "board_members.parquet"
+    history_file = DATA / "board_history.parquet"
+    if not members_file.exists():
+        print("缺 board_members.parquet，先跑 fetch_board_members.py")
+        return 2
+
+    def normalize(code: str) -> str:
+        code = code.strip().lower()
+        if "." in code:
+            code = code.split(".")[1]
+        return code.zfill(6)
+
+    wanted = [normalize(c) for c in codes_text.split(",") if c.strip()]
+    members = pd.read_parquet(members_file)
+    members["code"] = members["code"].astype(str).str.zfill(6)
+
+    momentum_map: dict[str, tuple[float, float]] = {}
+    if history_file.exists():
+        history = pd.read_parquet(history_file)
+        history["date"] = pd.to_datetime(history["date"])
+        close = history.pivot_table(index="date", columns="board", values="close").sort_index()
+        r5 = (close.iloc[-1] / close.iloc[-6] - 1.0) * 100
+        r20 = (close.iloc[-1] / close.iloc[-21] - 1.0) * 100
+        momentum_map = {board: (float(r5[board]), float(r20[board])) for board in r5.index}
+
+    for code in wanted:
+        boards = members.loc[members["code"] == code, "board"].tolist()
+        if not boards:
+            print(f"{code}: 没有题材数据（可能不在东财概念里）")
+            continue
+        rows = []
+        for board in boards:
+            r5, r20 = momentum_map.get(board, (float("nan"), float("nan")))
+            rows.append((board, r5, r20))
+        rows.sort(key=lambda item: (-(item[1] if item[1] == item[1] else -99)))
+        print(f"\n{code}（{len(rows)} 个题材，按 5 日动量排序）")
+        for board, r5, r20 in rows[:8]:
+            tag = "🔥" if r5 > 3 else ("❄️" if r5 < -3 else "")
+            print(f"  {board:<16} 5日 {r5:+6.1f}%  20日 {r20:+6.1f}%  {tag}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="行业板块数据与报告")
-    parser.add_argument("action", choices=["fetch", "report", "boards", "momentum", "lineup"])
+    parser.add_argument("action", choices=["fetch", "report", "boards", "momentum", "lineup", "check"])
     parser.add_argument("--date", default=None)
     parser.add_argument("--top", type=int, default=10)
+    parser.add_argument("--codes", default="")
     args = parser.parse_args(argv)
     if args.action == "fetch":
         return fetch_industry()
@@ -428,6 +477,11 @@ def main(argv: list[str] | None = None) -> int:
         return momentum(args.top)
     if args.action == "lineup":
         return lineup(max(1, min(args.top, 10)))
+    if args.action == "check":
+        if not args.codes:
+            print("用法: sectors.py check --codes sz.000404,sh.600998")
+            return 2
+        return check(args.codes)
     return report(args.date, args.top)
 
 
