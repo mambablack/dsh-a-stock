@@ -258,9 +258,82 @@ def boards(top: int = 15) -> int:
     return 0
 
 
+def momentum(top: int = 15) -> int:
+    """概念板块动量面板：5/20/60 日涨幅、排名变化（轮动）、板块宽度。
+
+    数据来自 `fetch_board_history.py` 拉下来的 `trader/data/board_history.parquet`。
+    用途：盘前判断「资金在往哪个题材搬家」——只看当天涨幅会漏掉轮动趋势。
+    """
+    history_file = DATA / "board_history.parquet"
+    if not history_file.exists():
+        print(f"没有板块历史 {history_file}，先跑: python scripts/fetch_board_history.py")
+        return 2
+    history = pd.read_parquet(history_file)
+    history["date"] = pd.to_datetime(history["date"])
+    close = history.pivot_table(index="date", columns="board", values="close")
+    close = close.sort_index()
+    latest = close.index[-1]
+
+    def ret(days: int) -> pd.Series:
+        if len(close) <= days:
+            return pd.Series(dtype=float)
+        return (close.iloc[-1] / close.iloc[-1 - days] - 1.0) * 100
+
+    r5, r20, r60 = ret(5), ret(20), ret(60)
+    table = pd.DataFrame({"r5": r5, "r20": r20, "r60": r60}).dropna(subset=["r5", "r20"])
+    if table.empty:
+        print("板块历史太短，算不出动量")
+        return 2
+
+    # 剔除"事件类"板块（昨日涨停/连板/首板/打板/破净等），它们不是题材，只会污染排行
+    event_keywords = ("昨日", "涨停", "连板", "首板", "打板", "含一字", "破净", "风格", "热股")
+    table = table[~table.index.to_series().str.contains("|".join(event_keywords))]
+    table["rank5"] = table["r5"].rank(ascending=False, pct=True)
+    table["rank20"] = table["r20"].rank(ascending=False, pct=True)
+    table["加速"] = table["rank20"] - table["rank5"]          # >0 表示近 5 日排名上升（在加速）
+    table = table.sort_values("r5", ascending=False)
+
+    breadth = float((table["r5"] > 0).mean() * 100)
+    lines = [
+        f"# 板块动量 {latest.date()}",
+        "",
+        f"- 覆盖 {len(table)} 个概念板块；近 5 日上涨的板块占 **{breadth:.0f}%**",
+        "",
+        f"## 近 5 日最强（Top {top}）",
+        "",
+        "| 板块 | 5日 | 20日 | 60日 |",
+        "|---|---:|---:|---:|",
+    ]
+    for name, row in table.head(top).iterrows():
+        lines.append(f"| {name} | {row['r5']:+.1f}% | {row['r20']:+.1f}% | {row['r60']:+.1f}% |")
+
+    lines += ["", "## 近 20 日最强（Top 10）", "",
+              "| 板块 | 20日 | 5日 | 60日 |", "|---|---:|---:|---:|"]
+    for name, row in table.sort_values("r20", ascending=False).head(10).iterrows():
+        lines.append(f"| {name} | {row['r20']:+.1f}% | {row['r5']:+.1f}% | {row['r60']:+.1f}% |")
+
+    lines += ["", "## 正在加速的板块（5 日排名比 20 日排名明显靠前）", "",
+              "| 板块 | 5日 | 20日 | 排名提升 |", "|---|---:|---:|---:|"]
+    for name, row in table.sort_values("加速", ascending=False).head(10).iterrows():
+        lines.append(f"| {name} | {row['r5']:+.1f}% | {row['r20']:+.1f}% | {row['加速'] * 100:.0f}pt |")
+
+    lines += ["", "## 说明", "",
+              "- 数据口径：东财概念板块指数（`stock_board_concept_hist_em`），2023 年至今；",
+              "- 「加速」= 20 日排名分位 − 5 日排名分位，正值越大说明资金近期在切入；",
+              "- 用途是**盘前背景**（知道钱在哪个方向），不是硬过滤条件（M-005 已证伪硬过滤）。"]
+
+    text = "\n".join(lines) + "\n"
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    out = REPORTS / f"board-momentum-{latest.date()}.md"
+    out.write_text(text, encoding="utf-8")
+    print(text)
+    print(f"报告: {out.relative_to(ROOT)}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="行业板块数据与报告")
-    parser.add_argument("action", choices=["fetch", "report", "boards"])
+    parser.add_argument("action", choices=["fetch", "report", "boards", "momentum"])
     parser.add_argument("--date", default=None)
     parser.add_argument("--top", type=int, default=10)
     args = parser.parse_args(argv)
@@ -268,6 +341,8 @@ def main(argv: list[str] | None = None) -> int:
         return fetch_industry()
     if args.action == "boards":
         return boards(args.top)
+    if args.action == "momentum":
+        return momentum(args.top)
     return report(args.date, args.top)
 
 
