@@ -187,13 +187,88 @@ def report(target_date: str | None, top: int) -> int:
     return 0
 
 
+def boards(top: int = 15) -> int:
+    """东财题材/行业板块快照：一次调用拿到全部板块当日涨跌幅、涨跌家数、领涨股。
+
+    这是"热门板块"的真口径（证监会行业分不出 AI/机器人这类题材）。
+    盘前 09:15 运行时，快照就是上一交易日的板块表现。
+    """
+    import akshare as ak
+
+    try:
+        concepts = ak.stock_board_concept_name_em()
+        industries = ak.stock_board_industry_name_em()
+    except Exception as exc:                       # 网络/接口变动时明确失败
+        print(f"[FAIL] 东财板块接口不可用: {type(exc).__name__}: {str(exc)[:200]}")
+        return 2
+
+    concepts = concepts.copy()
+    concepts["板块类型"] = "概念"
+    industries = industries.copy()
+    industries["板块类型"] = "行业"
+    merged = pd.concat([concepts, industries], ignore_index=True)
+
+    DATA.mkdir(parents=True, exist_ok=True)
+    snapshot_path = DATA / "boards_snapshot.parquet"
+    merged.to_parquet(snapshot_path, index=False)
+
+    hot = merged.sort_values("涨跌幅", ascending=False).head(top)
+    cold = merged.sort_values("涨跌幅").head(5)
+
+    lines = [
+        f"# 板块快照 {date.today()}（东财口径）",
+        "",
+        f"- 概念 {len(concepts)} 个、行业 {len(industries)} 个",
+        "",
+        f"## 强势板块 Top {top}",
+        "",
+        "| 板块 | 类型 | 涨跌幅 | 上涨家数 | 下跌家数 | 领涨股 |",
+        "|---|---|---:|---:|---:|---|",
+    ]
+    for _, row in hot.iterrows():
+        lines.append(f"| {row['板块名称']} | {row['板块类型']} | {row['涨跌幅']:+.2f}% | "
+                     f"{int(row['上涨家数'])} | {int(row['下跌家数'])} | {row['领涨股票']} |")
+
+    lines += ["", "## 弱势板块 Bottom 5", "",
+              "| 板块 | 类型 | 涨跌幅 | 上涨家数 | 下跌家数 |",
+              "|---|---|---:|---:|---:|"]
+    for _, row in cold.iterrows():
+        lines.append(f"| {row['板块名称']} | {row['板块类型']} | {row['涨跌幅']:+.2f}% | "
+                     f"{int(row['上涨家数'])} | {int(row['下跌家数'])} |")
+
+    lines += ["", "## 用法", "",
+              "- 盘前看「钱在哪个题材」，只在这些板块所属的股票里找机会；",
+              "- 与 `sectors.py report`（证监会行业，来自本地日线）互补：一个看题材，一个看行业。",
+              "- 快照存 `trader/data/boards_snapshot.parquet`，可用 `ak.stock_board_concept_hist_em(period=\"daily\")` 补历史。"]
+
+    text = "\n".join(lines) + "\n"
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    out = REPORTS / f"boards-{date.today().isoformat()}.md"
+    out.write_text(text, encoding="utf-8")
+    print(text)
+    print(f"报告: {out.relative_to(ROOT)}")
+    payload = {
+        "date": date.today().isoformat(),
+        "hot": [{"board": row["板块名称"], "type": row["板块类型"],
+                 "pct": round(float(row["涨跌幅"]), 2),
+                 "up": int(row["上涨家数"]), "down": int(row["下跌家数"])}
+                for _, row in hot.head(10).iterrows()],
+    }
+    print("JSON:", json.dumps(payload, ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="行业板块数据与报告")
-    parser.add_argument("action", choices=["fetch", "report"])
+    parser.add_argument("action", choices=["fetch", "report", "boards"])
     parser.add_argument("--date", default=None)
     parser.add_argument("--top", type=int, default=10)
     args = parser.parse_args(argv)
-    return fetch_industry() if args.action == "fetch" else report(args.date, args.top)
+    if args.action == "fetch":
+        return fetch_industry()
+    if args.action == "boards":
+        return boards(args.top)
+    return report(args.date, args.top)
 
 
 if __name__ == "__main__":
