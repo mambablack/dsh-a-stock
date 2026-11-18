@@ -72,3 +72,5 @@
 **策略挖掘**：见 	rader/memory/strategy_mining.md。方法固定为两步——先把思想翻译成规则在**全市场**跑一遍（看是否真有信号），再挪到**已验证生态位**（热市 + 5-8 元 + 小盘 + 涨停基因）跑一遍；只有信号级正期望且组合 MDD ≤20% 才进入下一轮。
 
 **当前认知总览**：	rader/memory/current_view.md（打法指标、14 条挖掘结论、五条关键认知、自动化时间表、已知风险与下一步）。
+
+**数据资产**：`trader/data/` 下有 `stock_industry.parquet`（证监会行业）、`board_history.parquet`（554 概念板块日线）、`board_members.parquet`（81,010 条成分）、`financials.parquet`（31 个报告期业绩报表，含 ROE）。
